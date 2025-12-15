@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "source": "JobHunter Cache",
+    "generated_at": "2025-12-15T00:00:00Z",
+    "expires_at": "2025-12-16T11:00:00Z",
+    "ttl_hours": 35
+  },
+  "jobs": [
+    {
+      "id": "gh-001",
+      "title": "Python Script Developer",
+      "company": "Remote",
+      "match": 95,
+      "location": "Worldwide",
+      "type": "Remote",
+      "description": "Develop automation scripts in Python. Experience with APIs and data scraping required.",
+      "apply_url": "https://example.com/apply/python",
+      "posted_at": "2025-12-14"
+    },
+    {
+      "id": "gh-002",
+      "title": "Virtual Assistant",
+      "company": "Upwork",
+      "match": 90,
+      "location": "Worldwide",
+      "type": "Freelance",
+      "description": "Administrative support, email handling, and basic research tasks.",
+      "apply_url": "https://example.com/apply/va",
+      "posted_at": "2025-12-14"
+    }
+  ]
+}
