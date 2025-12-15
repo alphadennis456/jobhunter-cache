@@ -1,8 +1,8 @@
 {
   "meta": {
     "source": "JobHunter Cache",
-    "generated_at": "2025-12-15T07:53:05.287505Z",
-    "expires_at": "2025-12-16T18:53:05.287505Z",
+    "generated_at": "2025-12-15T08:19:33Z",
+    "expires_at": "2025-12-16T19:19:33Z",
     "ttl_hours": 35
   },
   "jobs": [
