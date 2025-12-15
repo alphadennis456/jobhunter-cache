@@ -1,0 +1,15 @@
+{
+  "jobs": [
+    {
+      "id": "gh-003",
+      "title": "Frontend Developer",
+      "company": "Remote",
+      "match": 88,
+      "location": "Worldwide",
+      "type": "Remote",
+      "description": "Build modern web interfaces using React or Vue.",
+      "apply_url": "https://example.com/apply/frontend",
+      "posted_at": "2025-12-15"
+    }
+  ]
+}

@@ -3,61 +3,71 @@ import os
 from datetime import datetime, timedelta
 import subprocess
 
-# --- Config ---
-CACHE_FILE = "jobs.json"
-NEW_JOBS_FILE = "new_jobs.json"  # temporary file with new jobs fetched
-GIT_REPO_DIR = os.path.dirname(os.path.abspath(__file__))
+# Files
+CACHE_DIR = os.path.dirname(os.path.abspath(__file__))
+JOBS_FILE = os.path.join(CACHE_DIR, "jobs.json")
+NEW_JOBS_FILE = os.path.join(CACHE_DIR, "new_jobs.json")
 
-# --- Load existing jobs ---
-if os.path.exists(CACHE_FILE):
-    with open(CACHE_FILE, "r", encoding="utf-8") as f:
-        try:
-            jobs_data = json.load(f)
-        except json.JSONDecodeError:
-            print("[WARN] jobs.json corrupted. Starting fresh.")
-            jobs_data = {"meta": {}, "jobs": []}
-else:
-    jobs_data = {"meta": {}, "jobs": []}
+# Config
+TTL_HOURS = 35
 
-existing_ids = {job["id"] for job in jobs_data.get("jobs", [])}
+def load_json(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
-# --- Load new jobs ---
-if os.path.exists(NEW_JOBS_FILE):
-    with open(NEW_JOBS_FILE, "r", encoding="utf-8") as f:
-        new_data = json.load(f)
-else:
-    print(f"[INFO] {NEW_JOBS_FILE} not found. Nothing to update.")
-    exit(0)
+def save_json(file_path, data):
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    print(f"[INFO] {file_path} updated with {len(data.get('jobs', []))} jobs.")
 
-# --- Merge new jobs ---
-added_count = 0
-for job in new_data.get("jobs", []):
-    if job["id"] not in existing_ids:
-        jobs_data["jobs"].append(job)
-        added_count += 1
+def merge_jobs(existing, new):
+    if existing is None:
+        return new
+    existing_ids = {job["id"] for job in existing.get("jobs", [])}
+    added = 0
+    for job in new.get("jobs", []):
+        if job["id"] not in existing_ids:
+            existing["jobs"].append(job)
+            added += 1
+    return existing, added
 
-# --- Update metadata ---
-now = datetime.utcnow()
-jobs_data["meta"] = {
-    "source": "JobHunter Cache",
-    "generated_at": now.isoformat() + "Z",
-    "expires_at": (now + timedelta(hours=35)).isoformat() + "Z",
-    "ttl_hours": 35
-}
+def update_meta(data):
+    now = datetime.utcnow()
+    data["meta"] = {
+        "source": "JobHunter Cache",
+        "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "expires_at": (now + timedelta(hours=TTL_HOURS)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ttl_hours": TTL_HOURS
+    }
 
-# --- Save updated cache ---
-with open(CACHE_FILE, "w", encoding="utf-8") as f:
-    json.dump(jobs_data, f, indent=4)
+def git_commit_push():
+    try:
+        subprocess.run(["git", "add", "jobs.json"], check=True)
+        subprocess.run(
+            ["git", "commit", "-m", f"Auto-update jobs.json ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"],
+            check=True
+        )
+        subprocess.run(["git", "pull", "--rebase"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        print("[INFO] GitHub push complete.")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Git operation failed: {e}")
 
-print(f"[INFO] jobs.json updated with {added_count} new jobs.")
+def main():
+    new_jobs = load_json(NEW_JOBS_FILE)
+    if not new_jobs:
+        print("[INFO] No new jobs found. Exiting.")
+        return
 
-# --- Git commit & push ---
-try:
-    subprocess.run(["git", "add", CACHE_FILE], cwd=GIT_REPO_DIR, check=True)
-    commit_msg = f"Auto-update jobs.json ({now.strftime('%Y-%m-%d %H:%M:%S')})"
-    subprocess.run(["git", "commit", "-m", commit_msg], cwd=GIT_REPO_DIR, check=True)
-    subprocess.run(["git", "pull", "--rebase"], cwd=GIT_REPO_DIR, check=True)
-    subprocess.run(["git", "push"], cwd=GIT_REPO_DIR, check=True)
-    print("[INFO] GitHub push complete.")
-except subprocess.CalledProcessError as e:
-    print(f"[ERROR] Git operation failed: {e}")
+    existing_jobs = load_json(JOBS_FILE)
+    merged, added_count = merge_jobs(existing_jobs, new_jobs)
+    update_meta(merged)
+
+    save_json(JOBS_FILE, merged)
+    print(f"[INFO] {added_count} new jobs merged.")
+    git_commit_push()
+
+if __name__ == "__main__":
+    main()
